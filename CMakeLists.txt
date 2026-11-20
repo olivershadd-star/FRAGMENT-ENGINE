@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.25)
+project(ANKSFragmentEngine VERSION 0.1.0 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include(CTest)
+add_executable(anks_probe Probe.cpp)
+add_test(NAME anks_engine COMMAND anks_probe)
+
+option(ANKS_BUILD_VST3 "Build the native VST3" ON)
+if(ANKS_BUILD_VST3)
+    set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "")
+    set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "")
+    set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "")
+    set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "")
+    if(VST3_SDK_ROOT)
+        add_subdirectory("${VST3_SDK_ROOT}" vst3sdk)
+        set(public_sdk_SOURCE_DIR "${VST3_SDK_ROOT}/public.sdk")
+    else()
+        include(FetchContent)
+        FetchContent_Declare(vst3sdk
+            GIT_REPOSITORY https://github.com/steinbergmedia/vst3sdk.git
+            GIT_TAG 3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96
+            GIT_SUBMODULES base cmake pluginterfaces public.sdk)
+        FetchContent_MakeAvailable(vst3sdk)
+        set(public_sdk_SOURCE_DIR "${vst3sdk_SOURCE_DIR}/public.sdk")
+    endif()
+    smtg_add_vst3plugin(ANKSFragmentEngine PACKAGE_NAME "ANKS Fragment Engine" SOURCES_LIST Plugin.cpp)
+    target_link_libraries(ANKSFragmentEngine PRIVATE sdk)
+endif()
