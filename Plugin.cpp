@@ -28,6 +28,8 @@ bool readState(IBStream* stream, Settings& settings) {
     for (auto& value : loaded)
         if (!reader.readDouble(value) || !std::isfinite(value) || value < 0. || value > 1.)
             return false;
+    // This legacy setting is superseded by the host's device switch.
+    loaded[anks::Enable] = 1.;
     settings = loaded;
     return true;
 }
@@ -167,7 +169,8 @@ public:
         if (auto* changes = data.inputParameterChanges) {
             for (int32 i = 0; i < changes->getParameterCount(); ++i) {
                 auto* queue = changes->getParameterData(i);
-                if (queue && queue->getParameterId() < settings.size()) {
+                if (queue && queue->getParameterId() < settings.size() &&
+                    queue->getParameterId() != anks::Enable) {
                     auto& cursor = automation[queue->getParameterId()];
                     cursor.queue = queue;
                     cursor.next();
@@ -262,7 +265,8 @@ public:
         if (status != kResultOk)
             return status;
         constexpr auto automate = ParameterInfo::kCanAutomate;
-        addToggle(STR16("Enable"), anks::Enable, automate);
+        addToggle(STR16("Enable"), anks::Enable,
+                  ParameterInfo::kIsHidden | ParameterInfo::kIsReadOnly);
         parameters.addParameter(new RangeParameter(STR16("Input"), anks::InDb,
                                                   STR16("dB"), -24., 12., 0.));
         parameters.addParameter(new RangeParameter(STR16("Output"), anks::OutDb,
@@ -311,8 +315,8 @@ private:
 BEGIN_FACTORY_DEF("ANKS Labs", "", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(processorId), PClassInfo::kManyInstances,
            kVstAudioEffectClass, "ANKS Fragment Engine", Vst::kDistributable,
-           "Fx|Delay", "0.1.0", kVstVersionString, Processor::create)
+           "Fx|Delay", "0.1.1", kVstVersionString, Processor::create)
 DEF_CLASS2(INLINE_UID_FROM_FUID(controllerId), PClassInfo::kManyInstances,
            kVstComponentControllerClass, "ANKS Fragment Engine Controller", 0,
-           "", "0.1.0", kVstVersionString, Controller::create)
+           "", "0.1.1", kVstVersionString, Controller::create)
 END_FACTORY

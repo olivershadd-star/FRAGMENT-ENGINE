@@ -1,4 +1,4 @@
-# ANKS Fragment Engine 0.1
+# ANKS Fragment Engine 0.1.1
 
 Prototype d’effet VST3 stéréo 32 bits flottants. Le moteur C++20 est indépendant du SDK. Le processeur Steinberg reçoit le transport et les événements d’automation. Le contrôleur expose les paramètres dans l’interface générique du DAW.
 
@@ -8,7 +8,9 @@ Prototype d’effet VST3 stéréo 32 bits flottants. Le moteur C++20 est indépe
 
 Le lissage des raccords interpole depuis le dernier échantillon wet pendant au plus 2 ms. Les réglages sont sauvegardés avec une version de format. Les fragments restent en mémoire volatile. Le bypass VST3 restitue le signal original, et la latence déclarée est de zéro échantillon.
 
-Ce prototype couvre LIVE_CAPTURE, les divisions droites de 1/1 à 1/64, le réglage dry/wet, les gains, l’activation et le bypass. Les signatures rythmiques complexes, les modes millisecondes et HISTORY_CAPTURE, Freeze, les effets supplémentaires et l’éditeur graphique sont hors de cette itération.
+Utiliser l’interrupteur du périphérique dans Ableton pour activer ou désactiver l’effet. Les anciens états restent lisibles. Le réglage Enable de la version 0.1 et son automation sont ignorés.
+
+Ce prototype couvre LIVE_CAPTURE, les divisions droites de 1/1 à 1/64, le réglage dry/wet, les gains et le bypass. Les signatures rythmiques complexes, les modes millisecondes et HISTORY_CAPTURE, Freeze, les effets supplémentaires et l’éditeur graphique sont hors de cette itération.
 
 ## Compiler et lancer
 
