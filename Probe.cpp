@@ -51,6 +51,54 @@ bool verifyRepeatAutomation(double rate) {
     return true;
 }
 
+bool verifyPitch() {
+    constexpr double rate = 48000.;
+    constexpr int slice = 6000;
+    constexpr int cycle = 4 * slice;
+    constexpr int offset = 480;
+    constexpr anks::Pitch pattern{anks::PitchSequence::Pattern, 0, {-12, 12, -12, 0}};
+    constexpr anks::Pitch down{anks::PitchSequence::Step, -12, {}};
+    for (const auto& pitch : {pattern, down}) {
+        anks::Engine engine;
+        engine.prepare(rate);
+        for (int i = 0; i < 2 * cycle; ++i) {
+            const auto source = static_cast<float>(i % cycle) / cycle;
+            const auto output = engine.process({source, -source}, i * 2. / rate,
+                                                120., true, .25, 1., 1., 1., 1.,
+                                                true, false, true, pitch);
+            const int phase = i % slice;
+            if (phase != offset)
+                continue;
+            const int note = i % cycle / slice;
+            constexpr std::array patternRates{1., 2., .5, 1.};
+            constexpr std::array stepRates{1., .5, .25, .25};
+            const auto& rates = pitch.mode == anks::PitchSequence::Pattern
+                ? patternRates : stepRates;
+            const auto expected = static_cast<float>(offset * rates[note] / cycle);
+            if (std::abs(output[0] - expected) > 1.e-6f ||
+                std::abs(output[1] + expected) > 1.e-6f)
+                return false;
+        }
+    }
+
+    anks::Engine engine;
+    engine.prepare(rate);
+    constexpr int trigger = 8400;
+    constexpr int afterRamp = 4800;
+    for (int i = 0; i <= trigger + afterRamp; ++i) {
+        const auto source = static_cast<float>(i) / cycle;
+        const auto output = engine.process({source, -source}, i * 2. / rate,
+                                            120., true, .25, 1., 1., 1., 1.,
+                                            true, false, i >= trigger, pattern);
+        if (i == trigger + afterRamp) {
+            const auto expected = static_cast<float>(afterRamp / 2) / cycle;
+            if (std::abs(output[0] - expected) > 1.e-6f)
+                return false;
+        }
+    }
+    return true;
+}
+
 void littleEndian(std::ostream& out, std::uint32_t value, int bytes) {
     for (int i = 0; i < bytes; ++i) {
         out.put(static_cast<char>(value & 255));
@@ -96,6 +144,11 @@ bool render(const char* path, bool wet) {
 }
 
 int main(int argc, char** argv) {
+    if (!verifyPitch()) {
+        std::cerr << "Pitch timing or sequence mismatch\n";
+        return 1;
+    }
+    std::cout << "Pitch pattern, step, Refresh and Repeat reset OK\n";
     for (const double rate : {44100., 48000., 96000.})
         if (!verify(rate) || !verifyRepeatAutomation(rate)) {
             std::cerr << "Capture, bypass or Repeat automation mismatch at " << rate << " Hz\n";

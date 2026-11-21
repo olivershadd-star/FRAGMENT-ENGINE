@@ -2,6 +2,7 @@
 #include <atomic>
 #include <optional>
 #include "base/source/fstreamer.h"
+#include "pluginterfaces/base/futils.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "public.sdk/source/main/pluginfactory.h"
@@ -12,6 +13,7 @@ using namespace Steinberg;
 using namespace Steinberg::Vst;
 
 namespace {
+constexpr int32 stateVersion = 3;
 const FUID processorId(0x328197AC, 0x25624C79, 0x913BB334, 0x4525A66B);
 const FUID controllerId(0x8727916D, 0x139C4E88, 0x877A1769, 0x13C5BB16);
 using Values = decltype(anks::defaults)::value_type;
@@ -23,9 +25,10 @@ bool readState(IBStream* stream, Settings& settings) {
     IBStreamer reader(stream, kLittleEndian);
     int32 version{};
     Settings loaded = anks::defaults;
-    if (!reader.readInt32(version) || (version != 1 && version != 2))
+    if (!reader.readInt32(version) || (version < 1 || version > stateVersion))
         return false;
-    const std::size_t count = version == 1 ? anks::Repeat : anks::Count;
+    constexpr std::array stateSizes{anks::Repeat, anks::PitchMode, anks::Count};
+    const std::size_t count = stateSizes[version - 1];
     for (std::size_t id = 0; id < count; ++id) {
         auto& value = loaded[id];
         if (!reader.readDouble(value) || !std::isfinite(value) || value < 0. || value > 1.)
@@ -69,6 +72,16 @@ private:
     std::array<std::atomic<double>, anks::Count> values{};
     std::atomic<uint64> sequence{};
 };
+
+anks::Pitch readPitch(const Settings& settings) {
+    const auto semitones = [&](anks::Parameter id, int range) {
+        return FromNormalized(settings[id], range * 2) - range;
+    };
+    return {static_cast<anks::PitchSequence>(FromNormalized(settings[anks::PitchMode], 2)),
+            semitones(anks::PitchStep, 12),
+            {semitones(anks::Pitch1, 24), semitones(anks::Pitch2, 24),
+             semitones(anks::Pitch3, 24), semitones(anks::Pitch4, 24)}};
+}
 
 struct Automation {
     IParamValueQueue* queue{};
@@ -141,7 +154,7 @@ public:
         if (!stream)
             return kInvalidArgument;
         IBStreamer writer(stream, kLittleEndian);
-        if (!writer.writeInt32(2))
+        if (!writer.writeInt32(stateVersion))
             return kResultFalse;
         Settings snapshot{};
         uint64 revision{};
@@ -203,6 +216,7 @@ public:
 
         float inputGain = gain(settings[anks::InDb]);
         float outputGain = gain(settings[anks::OutDb]);
+        auto pitch = readPitch(settings);
         uint64 silent = 3;
         for (int32 i = 0; i < std::max(1, data.numSamples); ++i) {
             for (std::size_t id = 0; id < settings.size(); ++id) {
@@ -215,6 +229,8 @@ public:
                             inputGain = gain(settings[id]);
                         if (id == anks::OutDb)
                             outputGain = gain(settings[id]);
+                        if (id >= anks::PitchMode)
+                            pitch = readPitch(settings);
                     }
                     cursor.next();
                 }
@@ -228,7 +244,7 @@ public:
                 tempo, playing, anks::divisions[anks::divisionIndex(settings[anks::Stutter])],
                 anks::divisions[anks::divisionIndex(settings[anks::Refresh])],
                 inputGain, outputGain, settings[anks::Mix], settings[anks::Enable] >= .5,
-                settings[anks::Bypass] >= .5, settings[anks::Repeat] >= .5);
+                settings[anks::Bypass] >= .5, settings[anks::Repeat] >= .5, pitch);
             for (int channel = 0; channel < 2; ++channel) {
                 output[channel][i] = frame[channel];
                 if (frame[channel] != 0.)
@@ -280,6 +296,15 @@ public:
                                                   STR16("%"), 0., 100., 100.));
         addToggle(STR16("Repeat"), anks::Repeat, automate);
         addToggle(STR16("Bypass"), anks::Bypass, automate | ParameterInfo::kIsBypass);
+        auto* pitchMode = new StringListParameter(STR16("Pitch Mode"), anks::PitchMode);
+        for (const auto* label : {STR16("Off"), STR16("Step"), STR16("Pattern")})
+            pitchMode->appendString(label);
+        setDefault(pitchMode, anks::PitchMode);
+        addPitch(STR16("Pitch Step"), anks::PitchStep, 12);
+        addPitch(STR16("Pitch 1"), anks::Pitch1, 24);
+        addPitch(STR16("Pitch 2"), anks::Pitch2, 24);
+        addPitch(STR16("Pitch 3"), anks::Pitch3, 24);
+        addPitch(STR16("Pitch 4"), anks::Pitch4, 24);
         return kResultOk;
     }
 
@@ -293,6 +318,11 @@ public:
     }
 
 private:
+    void addPitch(const TChar* title, anks::Parameter id, int range) {
+        parameters.addParameter(new RangeParameter(title, id, STR16("st"),
+                                                  -range, range, 0., range * 2));
+    }
+
     void addToggle(const TChar* title, anks::Parameter id, int32 flags) {
         auto* parameter = new StringListParameter(title, id, nullptr, flags);
         parameter->appendString(STR16("Off"));
@@ -319,8 +349,8 @@ private:
 BEGIN_FACTORY_DEF("ANKS Labs", "", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(processorId), PClassInfo::kManyInstances,
            kVstAudioEffectClass, "ANKS Fragment Engine", Vst::kDistributable,
-           "Fx|Delay", "0.2.0", kVstVersionString, Processor::create)
+           "Fx|Delay", "0.3.0", kVstVersionString, Processor::create)
 DEF_CLASS2(INLINE_UID_FROM_FUID(controllerId), PClassInfo::kManyInstances,
            kVstComponentControllerClass, "ANKS Fragment Engine Controller", 0,
-           "", "0.2.0", kVstVersionString, Controller::create)
+           "", "0.3.0", kVstVersionString, Controller::create)
 END_FACTORY

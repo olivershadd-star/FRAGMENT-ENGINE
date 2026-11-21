@@ -9,12 +9,35 @@
 namespace anks {
 using Stereo = std::array<float, 2>;
 inline constexpr std::array divisions{4., 2., 1., .5, .25, .125, .0625};
-enum Parameter { Enable, InDb, OutDb, Stutter, Refresh, Mix, Bypass, Repeat, Count };
-inline constexpr std::array defaults{1., 2./3, 2./3, 4./6, 2./6, 1., 0., 1.};
+enum Parameter { Enable, InDb, OutDb, Stutter, Refresh, Mix, Bypass, Repeat,
+                 PitchMode, PitchStep, Pitch1, Pitch2, Pitch3, Pitch4, Count };
+inline constexpr std::array defaults{1., 2./3, 2./3, 4./6, 2./6, 1., 0., 1.,
+                                     0., .5, .5, .5, .5, .5};
 
 inline int divisionIndex(double normalized) {
     return static_cast<int>(std::lround(normalized * (divisions.size() - 1)));
 }
+
+enum class PitchSequence { Off, Step, Pattern };
+
+struct Pitch {
+    PitchSequence mode{};
+    int step{};
+    std::array<int, 4> pattern{};
+
+    int semitones(std::size_t note) const {
+        switch (mode) {
+            case PitchSequence::Step:
+                return std::clamp(static_cast<int>(std::min<std::size_t>(note, 24)) * step,
+                                  -24, 24);
+            case PitchSequence::Pattern:
+                return pattern[note % pattern.size()];
+            case PitchSequence::Off:
+                return 0;
+        }
+        return 0;
+    }
+};
 
 class Engine {
 public:
@@ -28,13 +51,17 @@ public:
     void reset() {
         previousBeat = std::numeric_limits<double>::quiet_NaN();
         captureSize = captured = readPosition = fade = 0;
+        nextPitchNote = 1;
+        sourcePhase = 0.;
+        playbackRate = 1.;
         lastWet = {};
         wasRepeating = false;
     }
 
     Stereo process(Stereo input, double beat, double tempo, bool playing,
                    double stutter, double refresh, double inputGain,
-                   double outputGain, double mix, bool enabled, bool bypass, bool repeat) {
+                   double outputGain, double mix, bool enabled, bool bypass, bool repeat,
+                   const Pitch& pitch = {}) {
         if (!primed || bypass) {
             smoothedIn = inputGain;
             smoothedOut = outputGain;
@@ -65,6 +92,7 @@ public:
                 captureSize = std::clamp<std::size_t>(
                     std::lround(stutter * 60. * sampleRate / tempo), 1, grain.size());
                 captured = readPosition = 0;
+                nextPitchNote = 1;
                 fadeSize = std::min(captureSize / 8,
                                    static_cast<std::size_t>(sampleRate * .002));
                 if (std::isfinite(previousBeat))
@@ -74,12 +102,29 @@ public:
             if (captured < captureSize) {
                 grain[captured++] = dry;
             } else if (captureSize > 0) {
-                if (repeat && !wasRepeating)
+                if (repeat && !wasRepeating) {
                     readPosition = 0;
-                if (readPosition == 0)
+                    nextPitchNote = 0;
+                }
+                if (readPosition == 0) {
+                    sourcePhase = 0.;
+                    const int semitones = pitch.semitones(nextPitchNote++);
+                    playbackRate = semitones == 0 ? 1. : std::exp2(semitones / 12.);
                     beginFade();
-                wet = grain[readPosition++];
-                if (readPosition == captureSize)
+                } else if (sourcePhase >= captureSize) {
+                    sourcePhase = std::fmod(sourcePhase, static_cast<double>(captureSize));
+                    beginFade();
+                }
+                const auto index = static_cast<std::size_t>(sourcePhase);
+                wet = grain[index];
+                const float fraction = static_cast<float>(sourcePhase - index);
+                if (fraction > 0.f && index + 1 < captureSize) {
+                    const auto& next = grain[index + 1];
+                    for (std::size_t channel = 0; channel < wet.size(); ++channel)
+                        wet[channel] += fraction * (next[channel] - wet[channel]);
+                }
+                sourcePhase += playbackRate;
+                if (++readPosition == captureSize)
                     readPosition = 0;
             }
             if (fade > 0) {
@@ -119,7 +164,8 @@ private:
 
     std::vector<Stereo> grain;
     std::size_t captureSize{}, captured{}, readPosition{}, fade{}, fadeSize{};
-    double sampleRate{48000.}, previousBeat{};
+    std::size_t nextPitchNote{1};
+    double sampleRate{48000.}, previousBeat{}, sourcePhase{}, playbackRate{1.};
     double smoothedIn{1.}, smoothedOut{1.}, smoothedMix{};
     Stereo lastWet{}, fadeFrom{};
     bool primed{}, wasRepeating{};

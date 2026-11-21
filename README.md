@@ -1,4 +1,4 @@
-# ANKS Fragment Engine 0.2.0
+# ANKS Fragment Engine 0.3.0
 
 Prototype d’effet VST3 stéréo 32 bits flottants. Le moteur C++20 est indépendant du SDK. Le processeur Steinberg reçoit le transport et les événements d’automation. Le contrôleur expose les paramètres dans l’interface générique du DAW.
 
@@ -17,6 +17,14 @@ Ce prototype couvre LIVE_CAPTURE, les divisions droites de 1/1 à 1/64, le régl
 Le paramètre **Repeat** est automatisable dans le périphérique. Off laisse passer la voix et le moteur continue à capter selon **Refresh**. On relance le fragment depuis son début s’il est déjà capturé. Si le fragment est en cours de capture, la répétition démarre à la fin de la capture. Les passages On et Off sont lissés. Les anciens projets chargent Repeat sur On.
 
 Pour une voix posée sur le temps, essayer **Stutter 1/4**, **Refresh 1/2**, **Mix 100 %**. Place « la la la » sur le temps 1 et « dou dou dou » sur le temps 3. Active Repeat sur les temps 2 et 4 pour doubler les deux appels. Coupe Repeat sur le temps 4 pour laisser la fin originale. Choisis **Stutter 1/8** pour répéter un fragment plus court.
+
+## Créer une mélodie à partir d’une nappe
+
+Avec **Stutter 1/16**, **Refresh 1/4**, **Repeat On** et **Mix 100 %**, sélectionner **Pitch Mode → Pattern**. Régler **Pitch 1–4** sur **0, +3, +7, +3** en demi-tons. Le fragment initial passe à sa hauteur d’origine. Les trois répétitions prennent les valeurs Pitch 2, 3 et 4. Pour jouer Pitch 1 explicitement, couper puis réactiver Repeat après la capture. Après quatre pas, le motif boucle jusqu’au prochain Refresh.
+
+En mode **Step**, **Pitch Step** indique l’écart entre deux répétitions. À **+2**, on obtient 0, +2, +4, +6. Les décalages sont limités à deux octaves et les paramètres sont automatisables dans Live. Un changement de pitch s’applique au début du fragment suivant. Les projets existants chargent en mode **Off**.
+
+La transposition se fait par variation de la vitesse de lecture du fragment. Le départ et la durée de chaque répétition restent calés sur Stutter. Vers le haut, la lecture peut reboucler à l’intérieur d’une répétition. Vers le bas, elle lit une partie du fragment. Les raccords sont lissés et la transposition modifie aussi le timbre.
 
 ## Compiler et lancer
 
