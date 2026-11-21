@@ -9,8 +9,8 @@
 namespace anks {
 using Stereo = std::array<float, 2>;
 inline constexpr std::array divisions{4., 2., 1., .5, .25, .125, .0625};
-enum Parameter { Enable, InDb, OutDb, Stutter, Refresh, Mix, Bypass, Count };
-inline constexpr std::array defaults{1., 2./3, 2./3, 4./6, 2./6, 1., 0.};
+enum Parameter { Enable, InDb, OutDb, Stutter, Refresh, Mix, Bypass, Repeat, Count };
+inline constexpr std::array defaults{1., 2./3, 2./3, 4./6, 2./6, 1., 0., 1.};
 
 inline int divisionIndex(double normalized) {
     return static_cast<int>(std::lround(normalized * (divisions.size() - 1)));
@@ -29,15 +29,16 @@ public:
         previousBeat = std::numeric_limits<double>::quiet_NaN();
         captureSize = captured = readPosition = fade = 0;
         lastWet = {};
+        wasRepeating = false;
     }
 
     Stereo process(Stereo input, double beat, double tempo, bool playing,
                    double stutter, double refresh, double inputGain,
-                   double outputGain, double mix, bool enabled, bool bypass) {
+                   double outputGain, double mix, bool enabled, bool bypass, bool repeat) {
         if (!primed || bypass) {
             smoothedIn = inputGain;
             smoothedOut = outputGain;
-            smoothedMix = enabled ? mix : 0.;
+            smoothedMix = enabled && repeat ? mix : 0.;
             primed = true;
         }
         if (bypass) {
@@ -47,7 +48,7 @@ public:
         const double ramp = std::min(1., 200. / sampleRate);
         advance(smoothedIn, inputGain, ramp);
         advance(smoothedOut, outputGain, ramp);
-        advance(smoothedMix, enabled && playing ? mix : 0., ramp);
+        advance(smoothedMix, enabled && playing && repeat ? mix : 0., ramp);
         Stereo dry = input;
         if (smoothedIn != 1.)
             for (auto& sample : dry)
@@ -73,6 +74,8 @@ public:
             if (captured < captureSize) {
                 grain[captured++] = dry;
             } else if (captureSize > 0) {
+                if (repeat && !wasRepeating)
+                    readPosition = 0;
                 if (readPosition == 0)
                     beginFade();
                 wet = grain[readPosition++];
@@ -85,6 +88,7 @@ public:
                     wet[channel] += blend * (fadeFrom[channel] - wet[channel]);
             }
             lastWet = wet;
+            wasRepeating = repeat;
         } else {
             reset();
         }
@@ -118,6 +122,6 @@ private:
     double sampleRate{48000.}, previousBeat{};
     double smoothedIn{1.}, smoothedOut{1.}, smoothedMix{};
     Stereo lastWet{}, fadeFrom{};
-    bool primed{};
+    bool primed{}, wasRepeating{};
 };
 }

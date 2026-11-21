@@ -22,12 +22,15 @@ bool readState(IBStream* stream, Settings& settings) {
         return false;
     IBStreamer reader(stream, kLittleEndian);
     int32 version{};
-    Settings loaded{};
-    if (!reader.readInt32(version) || version != 1)
+    Settings loaded = anks::defaults;
+    if (!reader.readInt32(version) || (version != 1 && version != 2))
         return false;
-    for (auto& value : loaded)
+    const std::size_t count = version == 1 ? anks::Repeat : anks::Count;
+    for (std::size_t id = 0; id < count; ++id) {
+        auto& value = loaded[id];
         if (!reader.readDouble(value) || !std::isfinite(value) || value < 0. || value > 1.)
             return false;
+    }
     // This legacy setting is superseded by the host's device switch.
     loaded[anks::Enable] = 1.;
     settings = loaded;
@@ -138,7 +141,7 @@ public:
         if (!stream)
             return kInvalidArgument;
         IBStreamer writer(stream, kLittleEndian);
-        if (!writer.writeInt32(1))
+        if (!writer.writeInt32(2))
             return kResultFalse;
         Settings snapshot{};
         uint64 revision{};
@@ -225,7 +228,7 @@ public:
                 tempo, playing, anks::divisions[anks::divisionIndex(settings[anks::Stutter])],
                 anks::divisions[anks::divisionIndex(settings[anks::Refresh])],
                 inputGain, outputGain, settings[anks::Mix], settings[anks::Enable] >= .5,
-                settings[anks::Bypass] >= .5);
+                settings[anks::Bypass] >= .5, settings[anks::Repeat] >= .5);
             for (int channel = 0; channel < 2; ++channel) {
                 output[channel][i] = frame[channel];
                 if (frame[channel] != 0.)
@@ -275,6 +278,7 @@ public:
         addDivision(STR16("Refresh"), anks::Refresh);
         parameters.addParameter(new RangeParameter(STR16("Mix"), anks::Mix,
                                                   STR16("%"), 0., 100., 100.));
+        addToggle(STR16("Repeat"), anks::Repeat, automate);
         addToggle(STR16("Bypass"), anks::Bypass, automate | ParameterInfo::kIsBypass);
         return kResultOk;
     }
@@ -315,8 +319,8 @@ private:
 BEGIN_FACTORY_DEF("ANKS Labs", "", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(processorId), PClassInfo::kManyInstances,
            kVstAudioEffectClass, "ANKS Fragment Engine", Vst::kDistributable,
-           "Fx|Delay", "0.1.1", kVstVersionString, Processor::create)
+           "Fx|Delay", "0.2.0", kVstVersionString, Processor::create)
 DEF_CLASS2(INLINE_UID_FROM_FUID(controllerId), PClassInfo::kManyInstances,
            kVstComponentControllerClass, "ANKS Fragment Engine Controller", 0,
-           "", "0.1.1", kVstVersionString, Controller::create)
+           "", "0.2.0", kVstVersionString, Controller::create)
 END_FACTORY
