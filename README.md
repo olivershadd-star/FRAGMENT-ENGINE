@@ -1,4 +1,31 @@
-# ANKS Fragment Engine 0.3.0
+<div align="center">
+
+# ANKS LABS / FRAGMENT ENGINE
+### RHYTHMIC STUTTER · REPEAT · PITCH PATTERNS
+
+![Status](https://img.shields.io/badge/STATUS-PROTOTYPE_0.3.0-EF343E?style=for-the-badge&labelColor=10151E)
+![Audio](https://img.shields.io/badge/AUDIO-DEVELOPMENT-19B9FF?style=for-the-badge&labelColor=10151E)
+
+**BUILD. BREAK. REWIRE. LISTEN.**
+
+[![ANKS LABS](https://img.shields.io/badge/ANKS_LABS-GITHUB_PROFILE-19B9FF?style=for-the-badge&labelColor=10151E)](https://github.com/olivershadd-star)
+
+</div>
+
+---
+
+## 01 // LE PROJET
+
+**FRAGMENT ENGINE** est un prototype d'effet audio VST3, avec cœur C++20 indépendant du SDK, pour capturer des fragments courts et les répéter sur une grille rythmique. Les modes Pattern et Step font évoluer la hauteur des répétitions et ouvrent des possibilités de sound design sur batterie, textures et voix.
+
+> **Statut : prototype 0.3.0.** Le cœur et des tests Linux/VST3 sont documentés ; la validation du build Windows et dans Ableton demeure une étape séparée. Aucune version stable n'est annoncée.
+
+**[Sources & documentation](https://github.com/olivershadd-star/FRAGMENT-ENGINE)** · **[Builds de test / GitHub Actions](https://github.com/olivershadd-star/FRAGMENT-ENGINE/actions)**
+
+---
+
+## Documentation technique existante — Fragment Engine 0.3.0
+
 
 Prototype d’effet VST3 stéréo 32 bits flottants. Le moteur C++20 est indépendant du SDK. Le processeur Steinberg reçoit le transport et les événements d’automation. Le contrôleur expose les paramètres dans l’interface générique du DAW.
 
