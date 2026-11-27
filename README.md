@@ -14,13 +14,29 @@
 
 ---
 
+## ⬇ TÉLÉCHARGER ET INSTALLER — DOWNLOAD
+
+[![TÉLÉCHARGER LA DERNIÈRE VERSION](https://img.shields.io/github/v/release/olivershadd-star/FRAGMENT-ENGINE?include_prereleases&sort=date&display_name=tag&style=for-the-badge&logo=github&logoColor=F7FAFF&label=T%C3%89L%C3%89CHARGER&labelColor=10151E&color=EF343E)](../../releases/latest) [![TOUTES LES VERSIONS](https://img.shields.io/badge/TOUTES_LES-VERSIONS-F5C343?style=for-the-badge&labelColor=10151E)](../../releases)
+
+1. Clique sur **TÉLÉCHARGER**, puis, dans la rubrique *Assets*, télécharge `FRAGMENT-ENGINE-Windows-x64-X.Y.Z.zip` (X.Y.Z = numéro de version : prends toujours le plus grand).
+2. Clic droit sur le ZIP → **Extraire tout**.
+3. **Plugin pour Ableton** : copie le dossier `VST3\ANKS Fragment Engine.vst3` dans `C:\Program Files\Common Files\VST3`.
+4. Dans Live : **Préférences → Plug-ins → Dossier système VST3 = On**, puis **Relancer l'analyse**.
+5. C'est un **effet audio** : glisse-le sur une piste audio, une batterie ou une voix.
+
+*Windows peut afficher « Windows a protégé votre ordinateur » : clique sur **Informations complémentaires → Exécuter quand même** (programme gratuit non signé, c'est normal).*
+
+**EN —** Click **DOWNLOAD**, get `FRAGMENT-ENGINE-Windows-x64-X.Y.Z.zip` from *Assets*, extract it and copy `VST3\ANKS Fragment Engine.vst3` to `C:\Program Files\Common Files\VST3`, then rescan plug-ins.
+
+---
+
 ## 01 // LE PROJET
 
 **FRAGMENT ENGINE** est un prototype d'effet audio VST3, avec cœur C++20 indépendant du SDK, pour capturer des fragments courts et les répéter sur une grille rythmique. Les modes Pattern et Step font évoluer la hauteur des répétitions et ouvrent des possibilités de sound design sur batterie, textures et voix.
 
 > **Statut : prototype 0.3.0.** Le cœur et des tests Linux/VST3 sont documentés ; la validation du build Windows et dans Ableton demeure une étape séparée. Aucune version stable n'est annoncée.
 
-**[Sources & documentation](https://github.com/olivershadd-star/FRAGMENT-ENGINE)** · **[Builds de test / GitHub Actions](https://github.com/olivershadd-star/FRAGMENT-ENGINE/actions)**
+**[Sources & documentation](https://github.com/olivershadd-star/FRAGMENT-ENGINE)** · **[Toutes les versions](https://github.com/olivershadd-star/FRAGMENT-ENGINE/releases)**
 
 ---
 
